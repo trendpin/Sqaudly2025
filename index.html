@@ -1,310 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Squadly – Chat With Your Squad</title>
-    <meta charset="UTF-8" />
-
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Inter', sans-serif;
-            background: #0d0f14;
-            color: white;
-        }
-
-        #app {
-            display: none;
-            height: 100vh;
-            display: flex;
-        }
-
-        #sidebar {
-            width: 260px;
-            background: #13151d;
-            border-right: 1px solid #20232d;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        #chatArea {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #0d0f14;
-        }
-
-        .chatMessage {
-            padding: 10px 15px;
-            background: #1b1f2d;
-            margin: 5px 10px;
-            border-radius: 12px;
-            max-width: 60%;
-        }
-
-        .chatMessage.me {
-            background: #3e7bff;
-            align-self: end;
-        }
-
-        #messageInput {
-            padding: 15px;
-            border: none;
-            width: 100%;
-            background: #1a1d27;
-            color: white;
-            font-size: 16px;
-        }
-
-        #sendBtn {
-            padding: 15px;
-            background: #3e7bff;
-            border: none;
-            color: white;
-            width: 100px;
-            cursor: pointer;
-        }
-
-        #loginBox {
-            display: flex;
-            height: 100vh;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-        }
-
-        button {
-            padding: 12px 20px;
-            border: none;
-            background: #3e7bff;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        #profilePic {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            object-fit: cover;
-            background: gray;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Squadly – Chat With Your Squad</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <!-- LOGIN SCREEN -->
-    <div id="loginBox">
-        <h1>Welcome to Squadly ✨</h1>
-        <p>Chat instantly with your squad.</p>
-        <button id="loginBtn">Sign in with Google</button>
+  <!-- LOGIN SCREEN -->
+  <div id="loginBox">
+    <h1>Welcome to Squadly ✨</h1>
+    <p>Chat instantly with your squad.</p>
+    <button id="loginBtn">Sign in with Google</button>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <img id="profilePic" src="">
+      <h3 id="displayName"></h3>
+      <input id="searchUser" placeholder="Search users...">
+      <div id="searchResults"></div>
+      <button id="createGroupBtn">Create Group Chat</button>
+      <h3>Your Chats</h3>
+      <div id="chatList"></div>
     </div>
 
-    <!-- MAIN APP -->
-    <div id="app">
-        
-        <!-- SIDEBAR -->
-        <div id="sidebar">
-            <img id="profilePic" src="">
-            <h3 id="displayName"></h3>
-
-            <br><br>
-
-            <input id="searchUser" placeholder="Search users..." style="padding:10px;width:100%;background:#1a1d27;border:none;color:white;border-radius:6px">
-
-            <div id="searchResults"></div>
-
-            <br><br>
-            <h3>Your Chats</h3>
-            <div id="chatList"></div>
-
-        </div>
-
-        <!-- CHAT AREA -->
-        <div id="chatArea">
-            <div id="messages" style="flex:1;overflow-y:auto;padding:10px;"></div>
-
-            <div style="display:flex;border-top:1px solid #20232d;">
-                <input id="messageInput" placeholder="Message…" />
-                <button id="sendBtn">Send</button>
-            </div>
-        </div>
-
+    <!-- CHAT AREA -->
+    <div id="chatArea">
+      <div id="messages"></div>
+      <div id="chatInputArea">
+        <input id="messageInput" placeholder="Message…">
+        <button id="sendBtn">Send</button>
+        <button id="voiceBtn">🎤</button>
+      </div>
     </div>
+  </div>
 
-    <!-- FIREBASE + APP LOGIC -->
-    <script type="module">
+  <!-- GROUP CHAT MODAL -->
+  <div class="groupModal" id="groupModal">
+    <div class="groupModalContent">
+      <h3>Create Group</h3>
+      <input id="groupNameInput" placeholder="Group name">
+      <div id="groupUserList"></div>
+      <button id="createGroupConfirm">Create Group</button>
+      <button id="closeGroupModal">Cancel</button>
+    </div>
+  </div>
 
-        /***************** FIREBASE IMPORTS *****************/
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-app.js";
-        import { 
-            getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-auth.js";
-
-        import {
-            getFirestore, doc, setDoc, getDoc, collection,
-            addDoc, query, where, onSnapshot, serverTimestamp,
-            orderBy, updateDoc
-        } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-firestore.js";
-
-        import {
-            getStorage, ref, uploadBytes, getDownloadURL
-        } from "https://www.gstatic.com/firebasejs/9.24.0/firebase-storage.js";
-
-
-        /***************** FIREBASE CONFIG (YOURS) *****************/
-        const firebaseConfig = {
-            apiKey: "AIzaSyClDjc6wUuwXlTSOTPgI-aFVQU23GVeZUA",
-            authDomain: "squadly2025.firebaseapp.com",
-            projectId: "squadly2025",
-            storageBucket: "squadly2025.firebasestorage.app",
-            messagingSenderId: "46019416196",
-            appId: "1:46019416196:web:a098d815c7c6e0b210b2d1",
-            measurementId: "G-PX0SMQV7J0"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-
-
-
-        /***************** LOGIN HANDLING *****************/
-        const provider = new GoogleAuthProvider();
-
-        document.getElementById("loginBtn").onclick = async () => {
-            await signInWithPopup(auth, provider);
-        };
-
-        onAuthStateChanged(auth, async user => {
-            if (!user) return;
-
-            // Create user doc if not exists
-            await setDoc(doc(db, "users", user.uid), {
-                name: user.displayName,
-                uid: user.uid,
-                avatar: user.photoURL || "",
-                createdAt: serverTimestamp()
-            }, { merge: true });
-
-            document.getElementById("loginBox").style.display = "none";
-            document.getElementById("app").style.display = "flex";
-
-            document.getElementById("profilePic").src = user.photoURL;
-            document.getElementById("displayName").innerText = user.displayName;
-
-            loadChatList(user.uid);
-            setupUserSearch(user.uid);
-        });
-
-
-        /***************** USER SEARCH *****************/
-        function setupUserSearch(myUid){
-            const search = document.getElementById("searchUser");
-            const container = document.getElementById("searchResults");
-
-            search.oninput = async () => {
-                container.innerHTML = "";
-
-                const qSnap = await getDocs(query(collection(db, "users")));
-                qSnap.forEach(user => {
-                    const u = user.data();
-                    if(u.uid !== myUid && u.name.toLowerCase().includes(search.value.toLowerCase())){
-                        const div = document.createElement("div");
-                        div.innerHTML = `<div style="padding:10px;cursor:pointer">${u.name}</div>`;
-                        div.onclick = () => startChat(myUid, u.uid);
-                        container.appendChild(div);
-                    }
-                });
-            }
-        }
-
-
-        /***************** START CHAT (DM) *****************/
-        async function startChat(uid1, uid2){
-            const members = [uid1, uid2].sort();
-            const chatId = members.join("_");
-
-            const chatRef = doc(db, "chats", chatId);
-            const chatSnap = await getDoc(chatRef);
-
-            if(!chatSnap.exists()){
-                await setDoc(chatRef, {
-                    members,
-                    lastUpdated: serverTimestamp()
-                });
-            }
-
-            loadChat(chatId, uid1);
-        }
-
-
-        /***************** LOAD CHAT LIST *****************/
-        function loadChatList(myUid){
-            const chatList = document.getElementById("chatList");
-            const chatsRef = collection(db, "chats");
-
-            const q = query(chatsRef, where("members", "array-contains", myUid));
-
-            onSnapshot(q, snap => {
-                chatList.innerHTML = "";
-
-                snap.forEach(docSnap => {
-                    const chatId = docSnap.id;
-
-                    const div = document.createElement("div");
-                    div.innerHTML = `
-                        <div style="padding:10px;cursor:pointer;background:#1a1d27;border-radius:8px;margin-bottom:10px">
-                            Chat: ${chatId.replace(myUid, "").replace("_", "")}
-                        </div>
-                    `;
-                    div.onclick = () => loadChat(chatId, myUid);
-
-                    chatList.appendChild(div);
-                });
-            });
-        }
-
-
-        /***************** LOAD CHAT MESSAGES *****************/
-        function loadChat(chatId, myUid){
-            const messagesDiv = document.getElementById("messages");
-            messagesDiv.innerHTML = "";
-
-            const msgsRef = collection(db, "chats", chatId, "messages");
-            const q = query(msgsRef, orderBy("createdAt", "asc"));
-
-            onSnapshot(q, snap => {
-                messagesDiv.innerHTML = "";
-                snap.forEach(m => {
-                    const d = m.data();
-                    const div = document.createElement("div");
-
-                    div.className = "chatMessage" + (d.from === myUid ? " me" : "");
-                    div.innerText = d.text;
-
-                    messagesDiv.appendChild(div);
-                });
-
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            });
-
-            // send message
-            document.getElementById("sendBtn").onclick = async () => {
-                const txt = document.getElementById("messageInput").value;
-                if(!txt.trim()) return;
-
-                await addDoc(msgsRef, {
-                    text: txt,
-                    from: myUid,
-                    createdAt: serverTimestamp()
-                });
-
-                document.getElementById("messageInput").value = "";
-            };
-        }
-
-    </script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
